@@ -54,7 +54,7 @@ export async function PUT(
 
         const body = (await request.json()) as UpdateUserDTO;
 
-        const { role, ...safeData } = body as UpdateUserDTO & { role?: string };
+        const {...safeData } = body as UpdateUserDTO;
 
         await updateUser(id, safeData);
 
