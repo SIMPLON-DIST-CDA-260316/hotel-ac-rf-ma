@@ -5,34 +5,52 @@ import { eq } from "drizzle-orm";
 export type User = {
     id: string;
     email: string;
+    name: string;
     role: string;
+    createdAt: Date;
+    updatedAt: Date;
+    emailVerified: boolean;
+    image?: string | null;
 };
 
-export type UpdateUserDTO = Partial<Omit<User, "id">>;
-
-// ============= QUERIES =============
+export type UpdateUserDTO = Partial<{
+    email: string;
+    name: string;
+    image: string | null;
+}>;
 
 export async function getUserById(id: string): Promise<User | null> {
     const result = await db.select().from(user).where(eq(user.id, id)).limit(1);
-    return result.length > 0 ? (result[0] as User) : null;
+    return (result[0] as User) ?? null;
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
     const result = await db.select().from(user).where(eq(user.email, email)).limit(1);
-    return result.length > 0 ? (result[0] as User) : null;
+    return (result[0] as User) ?? null;
 }
 
 export async function getAllUsers(): Promise<User[]> {
-    return await db.select().from(user);
+    return (await db.select().from(user)) as User[];
 }
 
-// ============= MUTATIONS =============
+export async function getUsersByRole(role: string): Promise<User[]> {
+    return (await db.select().from(user).where(eq(user.role, role))) as User[];
+}
 
 export async function updateUser(id: string, data: UpdateUserDTO): Promise<void> {
-    await db.update(user).set(data).where(eq(user.id, id));
+    const payload: UpdateUserDTO = {};
+
+    if (data.email !== undefined) payload.email = data.email;
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.image !== undefined) payload.image = data.image;
+
+    await db.update(user).set(payload).where(eq(user.id, id));
+}
+
+export async function updateUserRole(id: string, role: string): Promise<void> {
+    await db.update(user).set({ role }).where(eq(user.id, id));
 }
 
 export async function deleteUser(id: string): Promise<void> {
     await db.delete(user).where(eq(user.id, id));
 }
-

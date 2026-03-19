@@ -1,14 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserById, deleteUser, getAllUsers } from "@/controllers/userController";
+import {
+    getAllUsers,
+    getUsersByRole,
+} from "@/controllers/userController";
+import {
+    getCurrentUser,
+    canViewUsers,
+} from "@/lib/authorization";
 
 export async function GET(request: NextRequest) {
     try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get("id");
+        const currentUser = await getCurrentUser(request);
 
-        if (userId) {
-            const user = await getUserById(userId);
-            return NextResponse.json(user);
+        if (!canViewUsers(currentUser?.role)) {
+            return NextResponse.json(
+                { error: "Accès refusé" },
+                { status: 403 }
+            );
+        }
+
+        const { searchParams } = new URL(request.url);
+        const role = searchParams.get("role");
+
+        if (role) {
+            const users = await getUsersByRole(role);
+            return NextResponse.json(users);
         }
 
         const users = await getAllUsers();
@@ -20,25 +36,3 @@ export async function GET(request: NextRequest) {
         );
     }
 }
-
-export async function DELETE(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get("id");
-
-        if (!userId) {
-            return NextResponse.json({ error: "ID requis" }, { status: 400 });
-        }
-
-        await deleteUser(userId);
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
-            { status: 500 }
-        );
-    }
-}
-
-
-

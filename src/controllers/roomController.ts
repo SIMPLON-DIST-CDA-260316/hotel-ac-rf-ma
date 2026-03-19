@@ -1,7 +1,4 @@
 import * as roomModel from "@/models/roomModel";
-import type { UpdateRoomDTO } from "@/models/roomModel";
-
-// ============= BUSINESS LOGIC =============
 
 export async function getRoomById(id: number) {
     const room = await roomModel.getRoomById(id);
@@ -15,7 +12,11 @@ export async function getAllRooms() {
     return await roomModel.getAllRooms();
 }
 
-export async function updateRoom(id: number, data: UpdateRoomDTO) {
+export async function createRoom(data: roomModel.CreateRoomDTO) {
+    return await roomModel.createRoom(data);
+}
+
+export async function updateRoom(id: number, data: roomModel.UpdateRoomDTO) {
     const room = await roomModel.getRoomById(id);
     if (!room) {
         throw new Error(`Chambre ${id} non trouvée`);
@@ -32,4 +33,3 @@ export async function deleteRoom(id: number) {
 
     await roomModel.deleteRoom(id);
 }
-

@@ -1,7 +1,9 @@
 import * as establishmentModel from "@/models/establishmentModel";
-import type { UpdateEstablishmentDTO } from "@/models/establishmentModel";
-
-// ============= BUSINESS LOGIC =============
+import type {
+    CreateEstablishmentDTO,
+    UpdateEstablishmentDTO,
+    FilterEstablishmentDTO,
+} from "@/models/establishmentModel";
 
 export async function getEstablishmentById(id: number) {
     const est = await establishmentModel.getEstablishmentById(id);
@@ -13,6 +15,10 @@ export async function getEstablishmentById(id: number) {
 
 export async function getAllEstablishments() {
     return await establishmentModel.getAllEstablishments();
+}
+
+export async function createEstablishment(data: CreateEstablishmentDTO) {
+    return await establishmentModel.createEstablishment(data);
 }
 
 export async function updateEstablishment(id: number, data: UpdateEstablishmentDTO) {
@@ -33,3 +39,6 @@ export async function deleteEstablishment(id: number) {
     await establishmentModel.deleteEstablishment(id);
 }
 
+export async function filterEstablishments(params: FilterEstablishmentDTO) {
+    return await establishmentModel.filterEstablishments(params);
+}

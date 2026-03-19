@@ -1,23 +1,24 @@
 import * as reservationModel from "@/models/reservationModel";
-import type { UpdateReservationDTO } from "@/models/reservationModel";
-
-// ============= BUSINESS LOGIC =============
 
 export async function getReservationById(id: number) {
-    const res = await reservationModel.getReservationById(id);
-    if (!res) {
+    const reservation = await reservationModel.getReservationById(id);
+    if (!reservation) {
         throw new Error(`Réservation ${id} non trouvée`);
     }
-    return res;
+    return reservation;
 }
 
 export async function getAllReservations() {
     return await reservationModel.getAllReservations();
 }
 
-export async function updateReservation(id: number, data: UpdateReservationDTO) {
-    const res = await reservationModel.getReservationById(id);
-    if (!res) {
+export async function createReservation(data: reservationModel.CreateReservationDTO) {
+    return await reservationModel.createReservation(data);
+}
+
+export async function updateReservation(id: number, data: reservationModel.UpdateReservationDTO) {
+    const reservation = await reservationModel.getReservationById(id);
+    if (!reservation) {
         throw new Error(`Réservation ${id} non trouvée`);
     }
 
@@ -25,11 +26,10 @@ export async function updateReservation(id: number, data: UpdateReservationDTO) 
 }
 
 export async function deleteReservation(id: number) {
-    const res = await reservationModel.getReservationById(id);
-    if (!res) {
+    const reservation = await reservationModel.getReservationById(id);
+    if (!reservation) {
         throw new Error(`Réservation ${id} non trouvée`);
     }
 
     await reservationModel.deleteReservation(id);
 }
-

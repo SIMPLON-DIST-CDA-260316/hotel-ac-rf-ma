@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRoomById, getAllRooms, updateRoom, deleteRoom } from "@/controllers/roomController";
+import {
+    createRoom,
+    deleteRoom,
+    getAllRooms,
+    getRoomById,
+    updateRoom,
+} from "@/controllers/roomController";
+import type { CreateRoomDTO } from "@/models/roomModel";
 
 export async function GET(request: NextRequest) {
     try {
@@ -21,6 +28,32 @@ export async function GET(request: NextRequest) {
     }
 }
 
+export async function POST(request: NextRequest) {
+    try {
+        const body = (await request.json()) as Partial<CreateRoomDTO>;
+
+        if (!body.name || !body.description) {
+            return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
+        }
+
+        const createdRoom = await createRoom({
+            name: body.name,
+            description: body.description,
+            image_path: body.image_path ?? null,
+            capacity: body.capacity ?? null,
+            price: body.price ?? null,
+            establishment_id: body.establishment_id ?? null,
+        });
+
+        return NextResponse.json(createdRoom, { status: 201 });
+    } catch (error) {
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : "Erreur lors de la création" },
+            { status: 500 }
+        );
+    }
+}
+
 export async function PUT(request: NextRequest) {
     try {
         const { id, ...data } = await request.json();
@@ -29,7 +62,7 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: "ID requis" }, { status: 400 });
         }
 
-        await updateRoom(id, data);
+        await updateRoom(Number(id), data);
         return NextResponse.json({ success: true });
     } catch (error) {
         return NextResponse.json(
@@ -57,4 +90,3 @@ export async function DELETE(request: NextRequest) {
         );
     }
 }
-
