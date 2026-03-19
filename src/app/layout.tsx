@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Montserrat, Palanquin, Raleway } from 'next/font/google'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import './globals.css'
+import '@/styles/globals.css'
 
 // Police des grands titres (H1)
 const montserrat = Montserrat({
