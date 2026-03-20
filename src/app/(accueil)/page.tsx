@@ -1,4 +1,8 @@
+'use client'
+
 import EtablissementCard from '@/components/cards/EtablissementCard'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 // Données fictives temporaires
 const ETABLISSEMENTS_MOCK = [
@@ -37,6 +41,21 @@ const ETABLISSEMENTS_MOCK = [
 const regions = [...new Set(ETABLISSEMENTS_MOCK.map(e => e.region))]
 
 export default function HomePage() {
+    const router = useRouter()
+
+    const [region, setRegion] = useState('')
+    const [dateDebut, setDateDebut] = useState('')
+    const [dateFin, setDateFin] = useState('')
+    const [personnes, setPersonnes] = useState('')
+
+    function handleRecherche() {
+        const params = new URLSearchParams()
+        if (region) params.set('region', region)
+        if (dateDebut) params.set('dateDebut', dateDebut)
+        if (dateFin) params.set('dateFin', dateFin)
+        if (personnes) params.set('personnes', personnes)
+        router.push(`/search?${params.toString()}`)
+    }
     return (
         <>
             {/* ── Hero ── */}
@@ -54,7 +73,10 @@ export default function HomePage() {
                                 <label className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide">
                                     Destination
                                 </label>
-                                <select className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50">
+                                <select
+                                    value={region}
+                                    onChange={(e) => setRegion(e.target.value)}
+                                    className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50">
                                     <option value="">Toutes les régions</option>
                                     {regions.map((region) => (
                                         <option key={region} value={region}>
@@ -68,7 +90,10 @@ export default function HomePage() {
                                 <label className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide">
                                     Nombre de personnes
                                 </label>
-                                <select className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50">
+                                <select
+                                    value={personnes}
+                                    onChange={(e) => setPersonnes(e.target.value)}
+                                    className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50">
                                     <option value="">Sélectionner</option>
                                     <option value="1">1 personne</option>
                                     <option value="2">2 personnes</option>
@@ -84,6 +109,14 @@ export default function HomePage() {
                                 </label>
                                 <input
                                     type="date"
+                                    value={dateDebut}
+                                    onChange={(e) => {
+                                        setDateDebut(e.target.value)
+                                        if (dateFin && e.target.value > dateFin) {
+                                            setDateFin('')
+                                        }
+                                    }}
+                                    max={dateFin || undefined}
                                     className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
                                 />
                             </div>
@@ -94,13 +127,18 @@ export default function HomePage() {
                                 </label>
                                 <input
                                     type="date"
+                                    value={dateFin}
+                                    onChange={(e) => setDateFin(e.target.value)}
+                                    min={dateDebut || undefined}
                                     className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
                                 />
                             </div>
 
                         </div>
 
-                        <button className="font-body mt-5 w-full bg-brand-mid hover:bg-brand-dark text-white py-3 rounded-xl text-sm font-medium transition-colors duration-200">
+                        <button
+                            onClick={handleRecherche}
+                            className="font-body mt-5 w-full bg-brand-mid hover:bg-brand-dark text-white py-3 rounded-xl text-sm font-medium transition-colors duration-200">
                             Rechercher la disponibilité
                         </button>
                     </div>
