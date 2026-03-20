@@ -23,16 +23,16 @@ export async function PUT(
         const body = await request.json();
         const role = body?.role;
 
-        if(role !== "user" && role !== "admin" && role !== "manager" ) {
+        if (!role) {
             return NextResponse.json(
-                { error: "Rôle invalide" },
+                { error: "Rôle requis" },
                 { status: 400 }
             );
         }
 
-        if (!role) {
+        if (role !== "user" && role !== "admin" && role !== "manager") {
             return NextResponse.json(
-                { error: "Rôle requis" },
+                { error: "Rôle invalide" },
                 { status: 400 }
             );
         }

@@ -43,8 +43,12 @@ export async function getAllEstablishments(): Promise<Establishment[]> {
 
 export async function createEstablishment(data: CreateEstablishmentDTO): Promise<Establishment> {
     const result = await db.insert(establishment).values({
-        ...data,
+        name: data.name,
+        description: data.description,
         image_path: data.image_path ?? null,
+        address: data.address,
+        region: data.region,
+        city: data.city,
         manager_id: data.manager_id ?? null,
     });
 
@@ -62,11 +66,17 @@ export async function createEstablishment(data: CreateEstablishmentDTO): Promise
 }
 
 export async function updateEstablishment(id: number, data: UpdateEstablishmentDTO): Promise<void> {
-    await db.update(establishment).set({
-        ...data,
-        image_path: data.image_path ?? null,
-        manager_id: data.manager_id ?? null,
-    }).where(eq(establishment.id, id));
+    const payload: Partial<UpdateEstablishmentDTO> = {};
+
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.description !== undefined) payload.description = data.description;
+    if (data.address !== undefined) payload.address = data.address;
+    if (data.region !== undefined) payload.region = data.region;
+    if (data.city !== undefined) payload.city = data.city;
+    if (data.image_path !== undefined) payload.image_path = data.image_path;
+    if (data.manager_id !== undefined) payload.manager_id = data.manager_id;
+
+    await db.update(establishment).set(payload).where(eq(establishment.id, id));
 }
 
 export async function deleteEstablishment(id: number): Promise<void> {

@@ -44,6 +44,10 @@ export async function updateUser(id: string, data: UpdateUserDTO): Promise<void>
     if (data.name !== undefined) payload.name = data.name;
     if (data.image !== undefined) payload.image = data.image;
 
+    if (Object.keys(payload).length === 0) {
+        return;
+    }
+
     await db.update(user).set(payload).where(eq(user.id, id));
 }
 

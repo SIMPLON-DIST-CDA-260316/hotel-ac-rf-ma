@@ -3,12 +3,19 @@ import { db } from "@/db/client";
 import { establishment } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getEstablishmentById } from "@/controllers/establishmentController";
+import { getCurrentUser, isAdmin } from "@/lib/authorization";
 
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const currentUser = await getCurrentUser(request);
+
+        if (!isAdmin(currentUser?.role)) {
+            return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+        }
+
         const { id } = await params;
         const body = await request.json();
         const manager_id = body.manager_id as string | null | undefined;

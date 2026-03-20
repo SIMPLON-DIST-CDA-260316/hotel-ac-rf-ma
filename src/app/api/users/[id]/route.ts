@@ -53,8 +53,11 @@ export async function PUT(
         }
 
         const body = (await request.json()) as UpdateUserDTO;
+        const safeData: UpdateUserDTO = {};
 
-        const {...safeData } = body as UpdateUserDTO;
+        if (body.email !== undefined) safeData.email = body.email;
+        if (body.name !== undefined) safeData.name = body.name;
+        if (body.image !== undefined) safeData.image = body.image;
 
         await updateUser(id, safeData);
 
