@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata } from 'next'
 import { Montserrat, Palanquin, Raleway } from 'next/font/google'
 import Header from '@/components/layout/Header'
