@@ -31,7 +31,7 @@ export default function LoginPage() {
                 throw new Error(response.error.message || "Erreur lors de la connexion");
             }
 
-            alert("Connecté avec succès !");
+
             router.push("/");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Erreur inconnue");
