@@ -83,3 +83,12 @@ export async function cancelReservation(
         await reservationModel.cancelReservationInDb(id);
     }
 }
+
+export async function deleteReservation(id: number) {
+    const reservation = await reservationModel.getReservationById(id);
+    if (!reservation) {
+        throw new Error(`Réservation ${id} non trouvée`);
+    }
+
+    await reservationModel.deleteReservation(id);
+}

@@ -59,3 +59,14 @@ export async function deleteRoom(id: number) {
 
     await roomModel.deleteRoom(id);
 }
+
+export async function canManagerAccessRoom(managerId: string, roomId: number): Promise<boolean> {
+    const establishmentId = await roomModel.getEstablishmentIdByRoomId(roomId);
+    if (!establishmentId) return false;
+
+    return await roomModel.isRoomInEstablishment(roomId, establishmentId);
+}
+
+export async function getManagerEstablishment(managerId: string) {
+    return await establishmentModel.getEstablishmentByManagerId(managerId);
+}

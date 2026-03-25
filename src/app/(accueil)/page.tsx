@@ -54,7 +54,7 @@ export default function HomePage() {
         if (dateDebut) params.set('dateDebut', dateDebut)
         if (dateFin) params.set('dateFin', dateFin)
         if (personnes) params.set('personnes', personnes)
-        router.push(`/search?${params.toString()}`)
+        router.push(`/etablissements?${params.toString()}`)
     }
     return (
         <>
