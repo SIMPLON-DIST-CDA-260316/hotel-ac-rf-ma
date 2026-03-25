@@ -1,4 +1,6 @@
 import * as galleryModel from "@/models/galleryModel";
+import * as roomModel from "@/models/roomModel";
+import * as establishmentModel from "@/models/establishmentModel";
 
 export async function getGalleryById(id: number) {
     const gallery = await galleryModel.getGalleryById(id);
@@ -6,6 +8,10 @@ export async function getGalleryById(id: number) {
         throw new Error(`Galerie ${id} non trouvée`);
     }
     return gallery;
+}
+
+export async function getGalleriesByRoomId(roomId: number) {
+    return await galleryModel.getGalleriesByRoomId(roomId);
 }
 
 export async function getAllGalleries() {
@@ -32,4 +38,30 @@ export async function deleteGallery(id: number) {
     }
 
     await galleryModel.deleteGallery(id);
+}
+
+export async function canManagerAccessGallery(managerId: string, galleryId: number): Promise<boolean> {
+    const gallery = await galleryModel.getGalleryWithRoomInfo(galleryId);
+    if (!gallery || !gallery.establishment_id) {
+        return false;
+    }
+
+    const managerEstablishment = await establishmentModel.getEstablishmentByManagerId(managerId);
+    if (!managerEstablishment) {
+        return false;
+    }
+
+    return managerEstablishment.id === gallery.establishment_id;
+}
+
+export async function createGalleryForRoom(roomId: number, data: galleryModel.CreateGalleryDTO) {
+    const room = await roomModel.getRoomById(roomId);
+    if (!room) {
+        throw new Error("Chambre non trouvée");
+    }
+
+    return await galleryModel.createGallery({
+        image_path: data.image_path ?? null,
+        room_id: roomId,
+    });
 }

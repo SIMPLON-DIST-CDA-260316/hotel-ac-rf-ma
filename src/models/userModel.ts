@@ -1,3 +1,4 @@
+
 import { db } from "@/db/client";
 import { user } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -57,4 +58,24 @@ export async function updateUserRole(id: string, role: string): Promise<void> {
 
 export async function deleteUser(id: string): Promise<void> {
     await db.delete(user).where(eq(user.id, id));
+}
+
+export async function isRoleValid(role: string): Promise<boolean> {
+    return role === "user" || role === "admin" || role === "manager";
+}
+
+export async function emailExists(email: string, excludeUserId?: string): Promise<boolean> {
+    const result = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, email))
+        .limit(1);
+
+    if (!result[0]) return false;
+
+    if (excludeUserId && result[0].id === excludeUserId) {
+        return false;
+    }
+
+    return true;
 }

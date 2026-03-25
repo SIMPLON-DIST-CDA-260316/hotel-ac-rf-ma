@@ -12,7 +12,14 @@ export async function GET(request: NextRequest) {
     try {
         const currentUser = await getCurrentUser(request);
 
-        if (!canViewUsers(currentUser?.role)) {
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
+        }
+
+        if (!canViewUsers(currentUser.role)) {
             return NextResponse.json(
                 { error: "Accès refusé" },
                 { status: 403 }
@@ -22,13 +29,20 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const role = searchParams.get("role");
 
+        if (role && role !== "user" && role !== "admin" && role !== "manager") {
+            return NextResponse.json(
+                { error: "Rôle invalide" },
+                { status: 400 }
+            );
+        }
+
         if (role) {
             const users = await getUsersByRole(role);
-            return NextResponse.json(users);
+            return NextResponse.json(users, { status: 200 });
         }
 
         const users = await getAllUsers();
-        return NextResponse.json(users);
+        return NextResponse.json(users, { status: 200 });
     } catch (error) {
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Erreur" },

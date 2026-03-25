@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db/client";
-import { establishment } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getEstablishmentById } from "@/controllers/establishmentController";
+import { assignManagerToEstablishment } from "@/controllers/establishmentController";
 import { getCurrentUser, isAdmin } from "@/lib/authorization";
 
 export async function PATCH(
@@ -20,20 +17,26 @@ export async function PATCH(
         const body = await request.json();
         const manager_id = body.manager_id as string | null | undefined;
 
-        const existing = await getEstablishmentById(Number(id));
-        if (!existing) {
-            return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
+        await assignManagerToEstablishment(Number(id), manager_id ?? null);
+
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Erreur";
+
+        if (message.includes("non trouvé")) {
+            return NextResponse.json({ error: message }, { status: 404 });
         }
 
-        await db
-            .update(establishment)
-            .set({ manager_id: manager_id ?? null })
-            .where(eq(establishment.id, Number(id)));
+        if (message.includes("introuvable")) {
+            return NextResponse.json({ error: message }, { status: 404 });
+        }
 
-        return NextResponse.json({ success: true });
-    } catch (error) {
+        if (message.includes("n'est pas un gérant")) {
+            return NextResponse.json({ error: message }, { status: 400 });
+        }
+
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
+            { error: message },
             { status: 500 }
         );
     }

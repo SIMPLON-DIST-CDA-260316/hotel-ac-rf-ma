@@ -1,25 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
     createReservation,
-    deleteReservation,
     getAllReservations,
-    getReservationById,
-    updateReservation,
+    getReservationsByUserId,
+    getReservationsByEstablishmentId,
 } from "@/controllers/reservationController";
 import type { CreateReservationDTO } from "@/models/reservationModel";
+import { getCurrentUser, isAdmin, isManager } from "@/lib/authorization";
+import { getEstablishmentByManagerId } from "@/controllers/establishmentController";
+import { getUserById } from "@/controllers/userController";
 
 export async function GET(request: NextRequest) {
     try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get("id");
+        const currentUser = await getCurrentUser(request);
 
-        if (id) {
-            const reservation = await getReservationById(Number(id));
-            return NextResponse.json(reservation);
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
         }
 
-        const reservations = await getAllReservations();
-        return NextResponse.json(reservations);
+        const { searchParams } = new URL(request.url);
+        const userId = searchParams.get("userId");
+
+        if (userId) {
+            if (isAdmin(currentUser.role)) {
+                const reservations = await getReservationsByUserId(userId);
+                return NextResponse.json(reservations, { status: 200 });
+            }
+
+            if (currentUser.id !== userId) {
+                return NextResponse.json(
+                    { error: "Accès refusé" },
+                    { status: 403 }
+                );
+            }
+
+            const reservations = await getReservationsByUserId(userId);
+            return NextResponse.json(reservations, { status: 200 });
+        }
+
+        if (isAdmin(currentUser.role)) {
+            const reservations = await getAllReservations();
+            return NextResponse.json(reservations, { status: 200 });
+        }
+
+        if (isManager(currentUser.role)) {
+            const managerEstablishment = await getEstablishmentByManagerId(currentUser.id);
+            if (managerEstablishment) {
+                const reservations = await getReservationsByEstablishmentId(managerEstablishment.id);
+                return NextResponse.json(reservations, { status: 200 });
+            }
+            return NextResponse.json([], { status: 200 });
+        }
+
+        const reservations = await getReservationsByUserId(currentUser.id);
+        return NextResponse.json(reservations, { status: 200 });
     } catch (error) {
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Erreur" },
@@ -30,62 +67,82 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = (await request.json()) as Partial<CreateReservationDTO>;
+        const currentUser = await getCurrentUser(request);
 
-        if (!body.startAt || !body.finishAt || !body.status) {
-            return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
         }
 
-        const createdReservation = await createReservation({
-            user_id: body.user_id ?? null,
-            room_id: body.room_id ?? null,
+        const body = (await request.json()) as Partial<CreateReservationDTO>;
+
+        if (!body.room_id || !body.startAt || !body.finishAt) {
+            return NextResponse.json(
+                { error: "Champs obligatoires manquants" },
+                { status: 400 }
+            );
+        }
+
+        let userId = currentUser.id;
+
+        if (body.user_id && body.user_id !== currentUser.id) {
+            if (!isAdmin(currentUser.role) && !isManager(currentUser.role)) {
+                return NextResponse.json(
+                    { error: "Accès refusé" },
+                    { status: 403 }
+                );
+            }
+
+            const targetUser = await getUserById(body.user_id);
+            if (!targetUser) {
+                return NextResponse.json(
+                    { error: "Utilisateur cible introuvable" },
+                    { status: 404 }
+                );
+            }
+
+            if (isManager(currentUser.role)) {
+                const managerEstablishment = await getEstablishmentByManagerId(currentUser.id);
+                if (!managerEstablishment) {
+                    return NextResponse.json(
+                        { error: "Vous n'êtes assigné à aucun établissement" },
+                        { status: 403 }
+                    );
+                }
+
+                const room = await (await import("@/controllers/roomController")).getRoomById(body.room_id);
+                if (room.establishment_id !== managerEstablishment.id) {
+                    return NextResponse.json(
+                        { error: "Vous ne pouvez créer des réservations que pour les chambres de votre établissement" },
+                        { status: 403 }
+                    );
+                }
+            }
+
+            userId = body.user_id;
+        }
+
+        const reservation = await createReservation({
+            user_id: userId,
+            room_id: body.room_id,
             startAt: new Date(body.startAt),
             finishAt: new Date(body.finishAt),
             person_number: body.person_number ?? null,
-            status: body.status,
+            status: body.status ?? "pending",
         });
 
-        return NextResponse.json(createdReservation, { status: 201 });
+        return NextResponse.json(reservation, { status: 201 });
     } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur lors de la création" },
-            { status: 500 }
-        );
-    }
-}
+        const message = error instanceof Error ? error.message : "Erreur";
 
-export async function PUT(request: NextRequest) {
-    try {
-        const { id, ...data } = await request.json();
-
-        if (!id) {
-            return NextResponse.json({ error: "ID requis" }, { status: 400 });
+        if (message.includes("n'est pas disponible")) {
+            return NextResponse.json({ error: message }, { status: 409 });
         }
 
-        await updateReservation(Number(id), data);
-        return NextResponse.json({ success: true });
-    } catch (error) {
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
-            { status: 500 }
-        );
-    }
-}
-
-export async function DELETE(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get("id");
-
-        if (!id) {
-            return NextResponse.json({ error: "ID requis" }, { status: 400 });
-        }
-
-        await deleteReservation(Number(id));
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
+            { error: message },
             { status: 500 }
         );
     }

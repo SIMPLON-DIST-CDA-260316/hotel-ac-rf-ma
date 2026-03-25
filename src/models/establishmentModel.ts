@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import { establishment, room, reservation } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, ne } from "drizzle-orm";
 
 export type Establishment = {
     id: number;
@@ -38,7 +38,12 @@ export async function getEstablishmentById(id: number): Promise<Establishment | 
 }
 
 export async function getAllEstablishments(): Promise<Establishment[]> {
-    return await db.select().from(establishment) as Establishment[];
+    return (await db.select().from(establishment)) as Establishment[];
+}
+
+export async function getEstablishmentByManagerId(managerId: string): Promise<Establishment | null> {
+    const result = await db.select().from(establishment).where(eq(establishment.manager_id, managerId)).limit(1);
+    return result.length > 0 ? (result[0] as Establishment) : null;
 }
 
 export async function createEstablishment(data: CreateEstablishmentDTO): Promise<Establishment> {
@@ -66,21 +71,44 @@ export async function createEstablishment(data: CreateEstablishmentDTO): Promise
 }
 
 export async function updateEstablishment(id: number, data: UpdateEstablishmentDTO): Promise<void> {
-    const payload: Partial<UpdateEstablishmentDTO> = {};
+    const payload: UpdateEstablishmentDTO = {};
 
     if (data.name !== undefined) payload.name = data.name;
     if (data.description !== undefined) payload.description = data.description;
+    if (data.image_path !== undefined) payload.image_path = data.image_path;
     if (data.address !== undefined) payload.address = data.address;
     if (data.region !== undefined) payload.region = data.region;
     if (data.city !== undefined) payload.city = data.city;
-    if (data.image_path !== undefined) payload.image_path = data.image_path;
     if (data.manager_id !== undefined) payload.manager_id = data.manager_id;
+
+    if (Object.keys(payload).length === 0) {
+        return;
+    }
 
     await db.update(establishment).set(payload).where(eq(establishment.id, id));
 }
 
 export async function deleteEstablishment(id: number): Promise<void> {
     await db.delete(establishment).where(eq(establishment.id, id));
+}
+
+export async function hasActiveOrFutureReservationsForEstablishment(id: number): Promise<boolean> {
+    const now = new Date();
+
+    const rows = await db
+        .select({ reservationId: reservation.id })
+        .from(reservation)
+        .innerJoin(room, eq(reservation.room_id, room.id))
+        .where(
+            and(
+                eq(room.establishment_id, id),
+                ne(reservation.status, "cancelled"),
+                gte(reservation.finishAt, now)
+            )
+        )
+        .limit(1);
+
+    return rows.length > 0;
 }
 
 function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {

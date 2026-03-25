@@ -13,7 +13,14 @@ export async function PUT(
         const { id } = await params;
         const currentUser = await getCurrentUser(request);
 
-        if (!canUpdateRole(currentUser?.role)) {
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
+        }
+
+        if (!canUpdateRole(currentUser.role)) {
             return NextResponse.json(
                 { error: "Accès refusé" },
                 { status: 403 }
@@ -37,12 +44,29 @@ export async function PUT(
             );
         }
 
+        if (currentUser.id === id) {
+            return NextResponse.json(
+                { error: "Vous ne pouvez pas modifier votre propre rôle" },
+                { status: 403 }
+            );
+        }
+
         await updateUserRole(id, role);
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
+        const message = error instanceof Error ? error.message : "Erreur";
+
+        if (message.includes("non trouvé")) {
+            return NextResponse.json({ error: message }, { status: 404 });
+        }
+
+        if (message.includes("invalide")) {
+            return NextResponse.json({ error: message }, { status: 400 });
+        }
+
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
+            { error: message },
             { status: 500 }
         );
     }

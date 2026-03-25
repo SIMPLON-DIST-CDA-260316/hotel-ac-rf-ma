@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
     createEstablishment,
-    deleteEstablishment,
     getAllEstablishments,
-    getEstablishmentById,
-    updateEstablishment,
     filterEstablishments,
 } from "@/controllers/establishmentController";
 import type { CreateEstablishmentDTO } from "@/models/establishmentModel";
@@ -13,12 +10,6 @@ import { getCurrentUser, isAdmin } from "@/lib/authorization";
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-
-        const id = searchParams.get("id");
-        if (id) {
-            const est = await getEstablishmentById(Number(id));
-            return NextResponse.json(est);
-        }
 
         const region = searchParams.get("region");
         const peopleParam = searchParams.get("people");
@@ -46,11 +37,11 @@ export async function GET(request: NextRequest) {
                 finishAt: bothDatesPresent ? finishAt : null,
             });
 
-            return NextResponse.json(establishments);
+            return NextResponse.json(establishments, { status: 200 });
         }
 
         const establishments = await getAllEstablishments();
-        return NextResponse.json(establishments);
+        return NextResponse.json(establishments, { status: 200 });
     } catch (error) {
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Erreur" },
@@ -70,7 +61,10 @@ export async function POST(request: NextRequest) {
         const body = (await request.json()) as Partial<CreateEstablishmentDTO>;
 
         if (!body.name || !body.description || !body.address || !body.region || !body.city) {
-            return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
+            return NextResponse.json(
+                { error: "Champs obligatoires manquants" },
+                { status: 400 }
+            );
         }
 
         const createdEstablishment = await createEstablishment({
@@ -87,55 +81,6 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Erreur lors de la création" },
-            { status: 500 }
-        );
-    }
-}
-
-export async function PUT(request: NextRequest) {
-    try {
-        const currentUser = await getCurrentUser(request);
-
-        if (!isAdmin(currentUser?.role)) {
-            return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-        }
-
-        const { id, ...data } = await request.json();
-
-        if (!id) {
-            return NextResponse.json({ error: "ID requis" }, { status: 400 });
-        }
-
-        await updateEstablishment(Number(id), data);
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
-            { status: 500 }
-        );
-    }
-}
-
-export async function DELETE(request: NextRequest) {
-    try {
-        const currentUser = await getCurrentUser(request);
-
-        if (!isAdmin(currentUser?.role)) {
-            return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-        }
-
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get("id");
-
-        if (!id) {
-            return NextResponse.json({ error: "ID requis" }, { status: 400 });
-        }
-
-        await deleteEstablishment(Number(id));
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
             { status: 500 }
         );
     }

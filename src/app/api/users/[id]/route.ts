@@ -3,12 +3,13 @@ import {
     deleteUser,
     getUserById,
     updateUser,
+    canUserModifyProfile,
+    canUserDeleteAccount,
+    canViewUserProfile,
 } from "@/controllers/userController";
 import {
     getCurrentUser,
-    canDeleteUser,
     isAdmin,
-    isManager,
 } from "@/lib/authorization";
 import type { UpdateUserDTO } from "@/models/userModel";
 
@@ -20,7 +21,14 @@ export async function GET(
         const { id } = await params;
         const currentUser = await getCurrentUser(request);
 
-        if (!(isAdmin(currentUser?.role) || isManager(currentUser?.role))) {
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
+        }
+
+        if (!canViewUserProfile(currentUser, id)) {
             return NextResponse.json(
                 { error: "Accès refusé" },
                 { status: 403 }
@@ -28,10 +36,15 @@ export async function GET(
         }
 
         const user = await getUserById(id);
-        return NextResponse.json(user);
+        return NextResponse.json(user, { status: 200 });
     } catch (error) {
+        const message = error instanceof Error ? error.message : "Erreur";
+        if (message.includes("non trouvé")) {
+            return NextResponse.json({ error: message }, { status: 404 });
+        }
+
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
+            { error: message },
             { status: 500 }
         );
     }
@@ -45,7 +58,14 @@ export async function PUT(
         const { id } = await params;
         const currentUser = await getCurrentUser(request);
 
-        if (!isAdmin(currentUser?.role)) {
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
+        }
+
+        if (!canUserModifyProfile(currentUser, id)) {
             return NextResponse.json(
                 { error: "Accès refusé" },
                 { status: 403 }
@@ -59,12 +79,29 @@ export async function PUT(
         if (body.name !== undefined) safeData.name = body.name;
         if (body.image !== undefined) safeData.image = body.image;
 
+        if (!isAdmin(currentUser.role) && (body as any).role !== undefined) {
+            return NextResponse.json(
+                { error: "Vous ne pouvez pas modifier votre rôle" },
+                { status: 403 }
+            );
+        }
+
         await updateUser(id, safeData);
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
+        const message = error instanceof Error ? error.message : "Erreur";
+
+        if (message.includes("non trouvé")) {
+            return NextResponse.json({ error: message }, { status: 404 });
+        }
+
+        if (message.includes("déjà utilisé")) {
+            return NextResponse.json({ error: message }, { status: 409 });
+        }
+
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
+            { error: message },
             { status: 500 }
         );
     }
@@ -78,7 +115,14 @@ export async function DELETE(
         const { id } = await params;
         const currentUser = await getCurrentUser(request);
 
-        if (!canDeleteUser(currentUser?.role)) {
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
+        }
+
+        if (!canUserDeleteAccount(currentUser, id)) {
             return NextResponse.json(
                 { error: "Accès refusé" },
                 { status: 403 }
@@ -87,10 +131,15 @@ export async function DELETE(
 
         await deleteUser(id);
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
+        const message = error instanceof Error ? error.message : "Erreur";
+        if (message.includes("non trouvé")) {
+            return NextResponse.json({ error: message }, { status: 404 });
+        }
+
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
+            { error: message },
             { status: 500 }
         );
     }
