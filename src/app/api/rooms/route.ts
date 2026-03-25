@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRoomById, getAllRooms, updateRoom, deleteRoom } from "@/controllers/roomController";
+import {
+    createRoom,
+    getAllRooms,
+    getManagerEstablishment,
+} from "@/controllers/roomController";
+import type { CreateRoomDTO } from "@/models/roomModel";
+import { getCurrentUser, isAdmin, isManager } from "@/lib/authorization";
 
 export async function GET(request: NextRequest) {
     try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get("id");
+        const currentUser = await getCurrentUser(request);
 
-        if (id) {
-            const room = await getRoomById(Number(id));
-            return NextResponse.json(room);
+        if (!currentUser) {
+            return NextResponse.json(
+                { error: "Non authentifié" },
+                { status: 401 }
+            );
+        }
+
+        if (!isAdmin(currentUser.role)) {
+            return NextResponse.json(
+                { error: "Accès refusé" },
+                { status: 403 }
+            );
         }
 
         const rooms = await getAllRooms();
-        return NextResponse.json(rooms);
+        return NextResponse.json(rooms, { status: 200 });
     } catch (error) {
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Erreur" },
@@ -21,40 +35,67 @@ export async function GET(request: NextRequest) {
     }
 }
 
-export async function PUT(request: NextRequest) {
+export async function POST(request: NextRequest) {
     try {
-        const { id, ...data } = await request.json();
+        const currentUser = await getCurrentUser(request);
 
-        if (!id) {
-            return NextResponse.json({ error: "ID requis" }, { status: 400 });
+        if (!currentUser) {
+            return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
         }
 
-        await updateRoom(id, data);
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
-            { status: 500 }
-        );
-    }
-}
-
-export async function DELETE(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get("id");
-
-        if (!id) {
-            return NextResponse.json({ error: "ID requis" }, { status: 400 });
+        if (!(isAdmin(currentUser.role) || isManager(currentUser.role))) {
+            return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
         }
 
-        await deleteRoom(Number(id));
-        return NextResponse.json({ success: true });
+        const body = (await request.json()) as Partial<CreateRoomDTO>;
+
+        if (
+            !body.name ||
+            !body.description ||
+            body.establishment_id === undefined ||
+            body.establishment_id === null
+        ) {
+            return NextResponse.json(
+                { error: "Champs obligatoires manquants" },
+                { status: 400 }
+            );
+        }
+
+        if (isManager(currentUser.role)) {
+            const managerEstablishment = await getManagerEstablishment(currentUser.id);
+
+            if (!managerEstablishment) {
+                return NextResponse.json(
+                    { error: "Vous n'êtes assigné à aucun établissement" },
+                    { status: 403 }
+                );
+            }
+
+            if (managerEstablishment.id !== body.establishment_id) {
+                return NextResponse.json(
+                    { error: "Vous ne pouvez gérer que les chambres de votre établissement" },
+                    { status: 403 }
+                );
+            }
+        }
+
+        const createdRoom = await createRoom({
+            name: body.name,
+            description: body.description,
+            image_path: body.image_path ?? null,
+            capacity: body.capacity ?? null,
+            price: body.price ?? null,
+            establishment_id: body.establishment_id,
+        });
+
+        return NextResponse.json(createdRoom, { status: 201 });
     } catch (error) {
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Erreur" },
-            { status: 500 }
-        );
+        const message = error instanceof Error ? error.message : "Erreur lors de la création";
+
+        if (message.includes("non trouvé")) {
+            return NextResponse.json({ error: message }, { status: 404 });
+        }
+
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
-
