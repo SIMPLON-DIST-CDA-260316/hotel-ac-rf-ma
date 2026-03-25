@@ -31,7 +31,7 @@ export default function SearchBar({
         if (dateDebut) params.set('dateDebut', dateDebut)
         if (dateFin) params.set('dateFin', dateFin)
         if (personnes) params.set('personnes', personnes)
-        router.push(`/search?${params.toString()}`)
+        router.push(`/etablissements?${params.toString()}`)
         setOuvert(false)
     }
 
