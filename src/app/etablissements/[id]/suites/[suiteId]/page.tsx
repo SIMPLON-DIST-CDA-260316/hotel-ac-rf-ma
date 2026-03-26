@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
 function differenceEnNuits(debut: string, fin: string): number {
     if (!debut || !fin) return 0
@@ -15,6 +15,8 @@ function differenceEnNuits(debut: string, fin: string): number {
 
 export default function SuitePage() {
     const params = useParams()
+    const router = useRouter()
+
     const roomId = params.suiteId as string
 
     const [suite, setSuite] = useState<any>(null)
@@ -71,8 +73,8 @@ export default function SuitePage() {
         <>
             <section className="bg-brand-forest text-white py-8 px-6">
                 <div className="max-w-6xl mx-auto">
-                    <Link
-                        href={`/etablissements/${suite.establishment_id}`}
+                    <button
+                        onClick={() => router.back()}
                         className="inline-flex items-center gap-2 font-body text-sm text-white/70 hover:text-white transition-colors duration-150"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -80,7 +82,7 @@ export default function SuitePage() {
                             <polyline points="12 19 5 12 12 5" />
                         </svg>
                         {etablissement?.name ?? 'Retour'}
-                    </Link>
+                    </button>
                 </div>
             </section>
 
@@ -176,6 +178,7 @@ export default function SuitePage() {
                                                 })()
                                                 : undefined
                                         }
+                                        disabled={!dateDebut}
                                         className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
                                     />
                                 </div>
@@ -186,7 +189,6 @@ export default function SuitePage() {
                                     <div className="flex flex-col gap-1">
                                         <div className="flex justify-between font-body text-sm text-gray-500">
                                             <span>{suite.price} € × {nuits} nuit{nuits > 1 ? 's' : ''}</span>
-                                            <span>{prixTotal} €</span>
                                         </div>
                                         <div className="flex justify-between font-body text-base font-semibold text-brand-forest mt-1">
                                             <span>Prix total du séjour</span>
