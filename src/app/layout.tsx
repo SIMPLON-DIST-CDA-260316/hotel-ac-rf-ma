@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Montserrat, Palanquin, Raleway } from 'next/font/google'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import AuthProvider from '@/components/providers/AuthProvider'
 import '@/styles/globals.css'
 
 import { auth } from '@/lib/auth'
@@ -55,13 +56,12 @@ export default async function RootLayout({children,}: {
           ${palanquin.variable}
           ${raleway.variable}
           flex flex-col min-h-screen bg-gray-50
-        `}
-        >
-        <Header isLoggedIn={isLoggedIn} role={role} />
-        <main className="flex-1">
-            {children}
-        </main>
-        <Footer />
+        `}>
+        <AuthProvider isLoggedIn={isLoggedIn} role={role}>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+        </AuthProvider>
         </body>
         </html>
     )
