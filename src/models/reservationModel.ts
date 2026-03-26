@@ -57,7 +57,7 @@ export async function getReservationsByEstablishmentId(establishmentId: number):
 }
 
 export async function createReservation(data: CreateReservationDTO): Promise<Reservation> {
-    const result = await db.insert(reservation).values({
+    await db.insert(reservation).values({
         user_id: data.user_id ?? null,
         room_id: data.room_id ?? null,
         startAt: data.startAt,
@@ -66,12 +66,19 @@ export async function createReservation(data: CreateReservationDTO): Promise<Res
         status: data.status ?? "pending",
     });
 
-    const insertedId = Number((result as { insertId?: number }).insertId);
-    if (!insertedId) {
-        throw new Error("Impossible de récupérer l'ID de la réservation créée");
-    }
+    const created = await db
+        .select()
+        .from(reservation)
+        .where(
+            and(
+                eq(reservation.user_id, data.user_id ?? null),
+                eq(reservation.room_id, data.room_id ?? null),
+                eq(reservation.startAt, data.startAt),
+                eq(reservation.finishAt, data.finishAt),
+            )
+        )
+        .limit(1);
 
-    const created = await db.select().from(reservation).where(eq(reservation.id, insertedId)).limit(1);
     if (!created[0]) {
         throw new Error("Réservation créée mais introuvable en base");
     }
