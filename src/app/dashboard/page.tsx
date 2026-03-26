@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import ManagerCard from '@/components/cards/dashboard/ManagersCard'
+import EtablissementsCard from '@/components/cards/dashboard/EtablissementsCard'
 import UsersCard from '@/components/cards/dashboard/UsersCard'
 
 type Gerant = {
@@ -153,6 +154,7 @@ export default function DashboardPage() {
                 deleteGerant={deleteGerant}
             />
             <UsersCard />
+            <EtablissementsCard />
         </div>
     )
 }

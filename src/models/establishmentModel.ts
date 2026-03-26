@@ -47,7 +47,7 @@ export async function getEstablishmentByManagerId(managerId: string): Promise<Es
 }
 
 export async function createEstablishment(data: CreateEstablishmentDTO): Promise<Establishment> {
-    const result = await db.insert(establishment).values({
+    await db.insert(establishment).values({
         name: data.name,
         description: data.description,
         image_path: data.image_path ?? null,
@@ -57,12 +57,7 @@ export async function createEstablishment(data: CreateEstablishmentDTO): Promise
         manager_id: data.manager_id ?? null,
     });
 
-    const insertedId = Number((result as { insertId?: number }).insertId);
-    if (!insertedId) {
-        throw new Error("Impossible de récupérer l'ID de l'établissement créé");
-    }
-
-    const created = await db.select().from(establishment).where(eq(establishment.id, insertedId)).limit(1);
+    const created = await db.select().from(establishment).where( and (eq(establishment.name, data.name), eq(establishment.address, data.address),eq(establishment.region, data.region), eq(establishment.city, data.city), eq(establishment.description, data.description))).limit(1);
     if (!created[0]) {
         throw new Error("Établissement créé mais introuvable en base");
     }
