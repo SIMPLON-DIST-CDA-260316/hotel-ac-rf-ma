@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import ManagerCard from '@/components/cards/dashboard/ManagersCard'
 
 type Gerant = {
@@ -10,6 +9,7 @@ type Gerant = {
     email: string
     role: string
     establishmentName?: string
+    establishmentId?: number
 }
 
 type Etablissement = {
@@ -24,17 +24,12 @@ type Etablissement = {
 }
 
 export default function DashboardPage() {
-    const router = useRouter()
 
     const [gerants, setGerants] = useState<Gerant[]>([])
     const [etablissements, setEtablissements] = useState<Etablissement[]>([])
     const [loading, setLoading] = useState(true)
     const [gerantEnEdition, setGerantEnEdition] = useState<string | null>(null)
     const [gerantEdit, setGerantEdit] = useState<Gerant | null>(null)
-    const [ajoutGerant, setAjoutGerant] = useState(false)
-    const [nouveauGerant, setNouveauGerant] = useState<Omit<Gerant, 'id'>>({
-        name: '', email: '', role: '', establishmentName: ''
-    })
 
     useEffect(() => {
         fetchData()
@@ -74,27 +69,50 @@ export default function DashboardPage() {
         }
     }
 
-
-    function startEditGerant(gerant: Gerant) {
-        setGerantEnEdition(gerant.id)
-        setGerantEdit({ ...gerant })
-    }
-
     async function saveGerant() {
         if (!gerantEdit) return
         try {
             const res = await fetch(`/api/users/${gerantEdit.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(gerantEdit)
+                body: JSON.stringify({
+                    name: gerantEdit.name,
+                    email: gerantEdit.email,
+                    role: gerantEdit.role
+                })
             })
-            if (res.ok) {
-                setGerants(gerants.map(g => g.id === gerantEdit.id ? gerantEdit : g))
-                setGerantEnEdition(null)
-                setGerantEdit(null)
+
+            if (!res.ok) {
+                throw new Error('Erreur lors de la mise à jour du gérant')
             }
+
+            // 2. Si l'établissement a changé, le mettre à jour
+            const oldGerant = gerants.find(g => g.id === gerantEdit.id)
+            if (oldGerant && gerantEdit.establishmentId !== oldGerant.establishmentId && gerantEdit.establishmentId) {
+                // D'abord, détacher l'ancien établissement s'il existe
+                if (oldGerant.establishmentId) {
+                    await fetch(`/api/establishments/${oldGerant.establishmentId}/manager`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ manager_id: null })
+                    })
+                }
+
+                // Ensuite, assigner le nouveau
+                await fetch(`/api/establishments/${gerantEdit.establishmentId}/manager`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ manager_id: gerantEdit.id })
+                })
+            }
+
+            setGerants(gerants.map(g => g.id === gerantEdit.id ? gerantEdit : g))
+            setGerantEnEdition(null)
+            setGerantEdit(null)
+            alert('Gérant mis à jour avec succès')
         } catch (error) {
             console.error('Erreur lors de la sauvegarde:', error)
+            alert('Erreur lors de la sauvegarde')
         }
     }
 
@@ -110,40 +128,6 @@ export default function DashboardPage() {
             }
         }
     }
-
-    async function addGerant() {
-        try {
-            const res = await fetch('/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...nouveauGerant, role: 'manager', establishmentName: undefined })
-            })
-            if (res.ok) {
-                const newGerant = await res.json()
-
-                // 2. Si un établissement est sélectionné, le lier au manager
-                if (nouveauGerant.establishmentName) {
-                    const establishment = etablissements.find(e => e.name === nouveauGerant.establishmentName)
-                    if (establishment) {
-                        await fetch(`/api/establishments/${establishment.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ manager_id: newGerant.id })
-                        })
-                    }
-                }
-
-                setGerants([...gerants, { ...newGerant, establishmentName: nouveauGerant.establishmentName }])
-                setAjoutGerant(false)
-                setNouveauGerant({ name: '', email: '', role: '', establishmentName: '' })
-                // Recharger les données pour avoir la mise à jour
-                fetchData()
-            }
-        } catch (error) {
-            console.error('Erreur lors de l\'ajout:', error)
-        }
-    }
-
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-10">
@@ -166,11 +150,6 @@ export default function DashboardPage() {
                 setGerantEnEdition={setGerantEnEdition}
                 saveGerant={saveGerant}
                 deleteGerant={deleteGerant}
-                ajoutGerant={ajoutGerant}
-                setAjoutGerant={setAjoutGerant}
-                nouveauGerant={nouveauGerant}
-                setNouveauGerant={setNouveauGerant}
-                addGerant={addGerant}
             />
         </div>
     )

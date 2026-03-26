@@ -8,6 +8,7 @@ type Gerant = {
     email: string
     role: string
     establishmentName?: string
+    establishmentId?: number
 }
 
 type Etablissement = {
@@ -30,11 +31,6 @@ interface ManagerCardProps {
     setGerantEnEdition: Dispatch<SetStateAction<string | null>>
     saveGerant: () => void
     deleteGerant: (id: string) => void
-    ajoutGerant: boolean
-    setAjoutGerant: Dispatch<SetStateAction<boolean>>
-    nouveauGerant: Omit<Gerant, 'id'>
-    setNouveauGerant: Dispatch<SetStateAction<Omit<Gerant, 'id'>>>
-    addGerant: () => void
 }
 
 export default function ManagerCard(props: ManagerCardProps) {
@@ -47,11 +43,6 @@ export default function ManagerCard(props: ManagerCardProps) {
         setGerantEnEdition,
         saveGerant,
         deleteGerant,
-        ajoutGerant,
-        setAjoutGerant,
-        nouveauGerant,
-        setNouveauGerant,
-        addGerant
     } = props
 
     function startEditGerant(gerant: Gerant) {
@@ -67,62 +58,7 @@ export default function ManagerCard(props: ManagerCardProps) {
                 <h2 className="font-subheading text-lg font-semibold text-brand-forest">
                     Gérants
                 </h2>
-                <button
-                    onClick={() => setAjoutGerant(!ajoutGerant)}
-                    className="font-body bg-brand-mid hover:bg-brand-dark text-white text-xs px-4 py-2 rounded-lg transition-colors"
-                >
-                    + Ajouter
-                </button>
             </div>
-
-            {/* Formulaire ajout gérant */}
-            {ajoutGerant && (
-                <div className="px-6 py-4 bg-brand-light/10 border-b border-gray-100">
-                    <p className="font-body text-xs text-brand-slate uppercase tracking-wide font-medium mb-3">
-                        Nouveau gérant
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        <input
-                            type="text"
-                            placeholder="Nom"
-                            value={nouveauGerant.name}
-                            onChange={(e) => setNouveauGerant({ ...nouveauGerant, name: e.target.value })}
-                            className="font-body border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mid"
-                        />
-                        <input
-                            type="email"
-                            placeholder="Email"
-                            value={nouveauGerant.email}
-                            onChange={(e) => setNouveauGerant({ ...nouveauGerant, email: e.target.value })}
-                            className="font-body border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mid"
-                        />
-                        <select
-                            value={nouveauGerant.establishmentName || ''}
-                            onChange={(e) => setNouveauGerant({ ...nouveauGerant, establishmentName: e.target.value })}
-                            className="font-body border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-mid"
-                        >
-                            <option value="">Choisir un établissement</option>
-                            {etablissements.map(e => (
-                                <option key={e.id} value={e.name}>{e.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-3">
-                        <button
-                            onClick={() => setAjoutGerant(false)}
-                            className="font-body text-sm text-brand-slate hover:text-brand-forest transition-colors px-4 py-2"
-                        >
-                            Annuler
-                        </button>
-                        <button
-                            onClick={addGerant}
-                            className="font-body bg-brand-mid hover:bg-brand-dark text-white text-sm px-5 py-2 rounded-lg transition-colors"
-                        >
-                            Valider
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {/* Tableau gérants */}
             <div className="overflow-x-auto">
@@ -131,7 +67,6 @@ export default function ManagerCard(props: ManagerCardProps) {
                         <tr className="border-b border-gray-100">
                             <th className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide text-left px-6 py-3">Nom</th>
                             <th className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide text-left px-6 py-3">E-mail</th>
-                            <th className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide text-left px-6 py-3">Rôle</th>
                             <th className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide text-left px-6 py-3">Établissement</th>
                             <th className="px-6 py-3"></th>
                         </tr>
@@ -145,7 +80,6 @@ export default function ManagerCard(props: ManagerCardProps) {
                                     <>
                                         <td className="font-body text-sm text-brand-forest px-6 py-4">{gerant.name}</td>
                                         <td className="font-body text-sm text-brand-slate px-6 py-4">{gerant.email}</td>
-                                        <td className="font-body text-sm text-brand-slate px-6 py-4">{gerant.role}</td>
                                         <td className="font-body text-sm text-brand-slate px-6 py-4">{gerant.establishmentName}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2 justify-end">
@@ -183,18 +117,24 @@ export default function ManagerCard(props: ManagerCardProps) {
                                             />
                                         </td>
                                         <td className="px-6 py-3">
-                                            <input
-                                                value={gerantEdit?.role}
-                                                onChange={(e) => setGerantEdit({ ...gerantEdit!, role: e.target.value })}
-                                                className="font-body border border-brand-mid/50 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-mid"
-                                            />
-                                        </td>
-                                        <td className="px-6 py-3">
-                                            <input
+                                            <select
                                                 value={gerantEdit?.establishmentName || ''}
-                                                disabled
-                                                className="font-body border border-gray-200 bg-gray-50 rounded-lg px-3 py-1.5 text-sm w-full text-gray-500"
-                                            />
+                                                onChange={(event) => {
+                                                    const selectedName = event.target.value
+                                                    const selectedEst = etablissements.find(est => est.name === selectedName)
+                                                    setGerantEdit({
+                                                        ...gerantEdit!,
+                                                        establishmentName: selectedName,
+                                                        establishmentId: selectedEst?.id
+                                                    })
+                                                }}
+                                                className="font-body border border-brand-mid/50 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-mid"
+                                            >
+                                                <option value="">— Aucun établissement</option>
+                                                {etablissements.map(est => (
+                                                    <option key={est.id} value={est.name}>{est.name}</option>
+                                                ))}
+                                            </select>
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center gap-2 justify-end">
