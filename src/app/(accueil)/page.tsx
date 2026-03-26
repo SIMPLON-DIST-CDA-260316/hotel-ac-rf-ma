@@ -2,43 +2,8 @@
 
 import EtablissementCard from '@/components/cards/EtablissementCard'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-
-// Données fictives temporaires
-const ETABLISSEMENTS_MOCK = [
-    {
-        id: '1',
-        name: 'Le Manoir des Brumes',
-        city: 'Honfleur',
-        region: 'Normandie',
-        address: '12 route des falaises, 14600 Honfleur',
-        description: 'Niché en lisière de forêt, cet hôtel offre un cadre paisible face à l\'estuaire de la Seine.',
-        image_path: null,
-        manager_id: '1',
-    },
-    {
-        id: '2',
-        name: 'La Bastide du Périgord',
-        city: 'Sarlat-la-Canéda',
-        region: 'Dordogne',
-        address: '5 chemin des chênes, 24200 Sarlat',
-        description: 'Au cœur du Périgord noir, une bastide authentique entourée de chênes centenaires.',
-        image_path: null,
-        manager_id: '2',
-    },
-    {
-        id: '3',
-        name: 'Chalet de la Clarée',
-        city: 'Névache',
-        region: 'Hautes-Alpes',
-        address: 'Route de la Clarée, 05100 Névache',
-        description: 'Perché à 1 700 m d\'altitude, un chalet d\'exception avec vue sur le massif des Écrins.',
-        image_path: null,
-        manager_id: '3',
-    },
-]
-
-const regions = [...new Set(ETABLISSEMENTS_MOCK.map(e => e.region))]
+import Link from 'next/link'
+import { useState, useEffect } from 'react'
 
 export default function HomePage() {
     const router = useRouter()
@@ -48,6 +13,34 @@ export default function HomePage() {
     const [dateFin, setDateFin] = useState('')
     const [personnes, setPersonnes] = useState('')
 
+    const [etablissements, setEtablissements] = useState<any[]>([])
+    const [regions, setRegions] = useState<string[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function fetchEtablissements() {
+            try {
+                const res = await fetch('/api/establishments')
+                const data = await res.json()
+
+                const shuffled = [...data].sort(() => Math.random() - 0.5)
+                const picked = shuffled.slice(0, 3)
+
+                setEtablissements(picked)
+
+                // Extraction des régions uniques depuis tous les résultats
+                const uniqueRegions = [...new Set<string>(data.map((e: any) => e.region).filter(Boolean))]
+                setRegions(uniqueRegions)
+            } catch (err) {
+                console.error('Erreur lors du chargement des établissements :', err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchEtablissements()
+    }, [])
+
     function handleRecherche() {
         const params = new URLSearchParams()
         if (region) params.set('region', region)
@@ -56,6 +49,7 @@ export default function HomePage() {
         if (personnes) params.set('personnes', personnes)
         router.push(`/etablissements?${params.toString()}`)
     }
+
     return (
         <>
             {/* ── Hero ── */}
@@ -78,10 +72,8 @@ export default function HomePage() {
                                     onChange={(e) => setRegion(e.target.value)}
                                     className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50">
                                     <option value="">Toutes les régions</option>
-                                    {regions.map((region) => (
-                                        <option key={region} value={region}>
-                                            {region}
-                                        </option>
+                                    {regions.map((r) => (
+                                        <option key={r} value={r}>{r}</option>
                                     ))}
                                 </select>
                             </div>
@@ -112,9 +104,7 @@ export default function HomePage() {
                                     value={dateDebut}
                                     onChange={(e) => {
                                         setDateDebut(e.target.value)
-                                        if (dateFin && e.target.value > dateFin) {
-                                            setDateFin('')
-                                        }
+                                        if (dateFin && e.target.value > dateFin) setDateFin('')
                                     }}
                                     max={dateFin || undefined}
                                     className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
@@ -155,23 +145,29 @@ export default function HomePage() {
                         </h2>
                     </div>
 
-                    <a href="/etablissements" className="font-body text-brand-mid hover:text-brand-dark text-sm font-medium transition-colors hidden md:block">
+                    <Link href="/etablissements" className="font-body text-brand-mid hover:text-brand-dark text-sm font-medium transition-colors hidden md:block">
                         Voir tous les hôtels →
-                    </a>
+                    </Link>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {ETABLISSEMENTS_MOCK.map((e) => (
-                        <EtablissementCard key={e.id} etablissement={e} />
-                    ))}
-                </div>
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="rounded-2xl bg-gray-100 animate-pulse h-64" />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {etablissements.map((e) => (
+                            <EtablissementCard key={e.id} etablissement={e} />
+                        ))}
+                    </div>
+                )}
 
-                {/* Lien visible sur mobile sous les cartes */}
                 <div className="mt-8 text-center md:hidden">
-
-                    <a href="/etablissements" className="font-body text-brand-mid hover:text-brand-dark text-sm font-medium transition-colors">
+                    <Link href="/etablissements" className="font-body text-brand-mid hover:text-brand-dark text-sm font-medium transition-colors">
                         Voir tous les hôtels →
-                    </a>
+                    </Link>
                 </div>
             </section>
         </>
