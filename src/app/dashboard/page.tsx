@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import ManagerCard from '@/components/cards/dashboard/ManagersCard'
+import EtablissementsCard from '@/components/cards/dashboard/EtablissementsCard'
 
 type Gerant = {
     id: string
@@ -151,6 +152,7 @@ export default function DashboardPage() {
                 saveGerant={saveGerant}
                 deleteGerant={deleteGerant}
             />
+            <EtablissementsCard />
         </div>
     )
 }
