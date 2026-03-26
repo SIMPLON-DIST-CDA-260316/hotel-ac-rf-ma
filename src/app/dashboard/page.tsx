@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import ManagerCard from '@/components/cards/dashboard/ManagersCard'
 import EtablissementsCard from '@/components/cards/dashboard/EtablissementsCard'
 import UsersCard from '@/components/cards/dashboard/UsersCard'
+import { authClient } from "@/lib/auth-client"
 
 type Gerant = {
     id: string
@@ -26,6 +27,7 @@ type Etablissement = {
 }
 
 export default function DashboardPage() {
+    const { data: session, isPending } = authClient.useSession()
 
     const [gerants, setGerants] = useState<Gerant[]>([])
     const [etablissements, setEtablissements] = useState<Etablissement[]>([])
@@ -139,6 +141,9 @@ export default function DashboardPage() {
                 <h1 className="font-heading text-3xl font-semibold text-brand-forest mb-1">
                     Dashboard
                 </h1>
+                <h2>
+                    Bienvenue {session?.user?.role === "manager" ? "Gérant" : "Administrateur"}, {session?.user?.name}
+                </h2>
                 <p className="font-body text-brand-slate text-sm">
                     Gérez les gérants, établissements, suites et réservations
                 </p>
