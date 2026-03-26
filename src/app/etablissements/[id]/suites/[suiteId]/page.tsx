@@ -1,19 +1,9 @@
-"use client";
-import { useState } from 'react'
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-
-const SUITE_MOCK = {
-    id: 's1',
-    name: 'Suite Horizon',
-    description: "Vue panoramique sur l'estuaire depuis un lit king-size. Baignoire îlot, terrasse privée et service petit-déjeuner inclus. Un espace de vie généreux de 65 m², entièrement tourné vers la nature.",
-    capacity: 2,
-    price: 320,
-    image_path: null,
-    images: [null, null, null],
-    etablissement_id: '1',
-    etablissement_name: 'Le Manoir des Brumes',
-}
+import { useParams } from 'next/navigation'
 
 function differenceEnNuits(debut: string, fin: string): number {
     if (!debut || !fin) return 0
@@ -24,27 +14,72 @@ function differenceEnNuits(debut: string, fin: string): number {
 }
 
 export default function SuitePage() {
-    const suite = SUITE_MOCK
+    const params = useParams()
+    const roomId = params.suiteId as string
+
+    const [suite, setSuite] = useState<any>(null)
+    const [etablissement, setEtablissement] = useState<any>(null)
+    const [galleries, setGalleries] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
     const [dateDebut, setDateDebut] = useState('')
     const [dateFin, setDateFin] = useState('')
     const [imageActive, setImageActive] = useState(0)
 
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [roomRes, galleriesRes] = await Promise.all([
+                    fetch(`/api/rooms/${roomId}`),
+                    fetch(`/api/rooms/${roomId}/galleries`),
+                ])
+
+                const roomData = roomRes.ok ? await roomRes.json() : null
+                const galleriesData = galleriesRes.ok ? await galleriesRes.json() : []
+
+                setSuite(roomData)
+                setGalleries(galleriesData)
+
+                if (roomData?.establishment_id) {
+                    const estRes = await fetch(`/api/establishments/${roomData.establishment_id}`)
+                    if (estRes.ok) setEtablissement(await estRes.json())
+                }
+            } catch (err) {
+                console.error('Erreur lors du chargement :', err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchData()
+    }, [roomId])
+
     const nuits = differenceEnNuits(dateDebut, dateFin)
-    const prixTotal = nuits * suite.price
+    const prixTotal = nuits * (suite?.price ?? 0)
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-brand-mid border-t-transparent rounded-full animate-spin" />
+            </div>
+        )
+    }
+
+    if (!suite) return null
 
     return (
         <>
             <section className="bg-brand-forest text-white py-8 px-6">
                 <div className="max-w-6xl mx-auto">
                     <Link
-                        href={`/etablissements/${suite.etablissement_id}`}
+                        href={`/etablissements/${suite.establishment_id}`}
                         className="inline-flex items-center gap-2 font-body text-sm text-white/70 hover:text-white transition-colors duration-150"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12" />
                             <polyline points="12 19 5 12 12 5" />
                         </svg>
-                        {suite.etablissement_name}
+                        {etablissement?.name ?? 'Retour'}
                     </Link>
                 </div>
             </section>
@@ -55,9 +90,9 @@ export default function SuitePage() {
                     <div className="lg:col-span-2 flex flex-col gap-6">
 
                         <div className="w-full h-72 md:h-96 rounded-2xl overflow-hidden bg-brand-light/20 relative">
-                            {suite.images[imageActive] ? (
+                            {galleries[imageActive]?.image_path ? (
                                 <Image
-                                    src={suite.images[imageActive] as string}
+                                    src={galleries[imageActive].image_path}
                                     alt={suite.name}
                                     fill
                                     className="object-cover"
@@ -69,23 +104,25 @@ export default function SuitePage() {
                             )}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
-                            {suite.images.map((img, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => setImageActive(i)}
-                                    className={`h-24 rounded-xl overflow-hidden bg-brand-light/20 relative transition-all duration-150 ${imageActive === i ? 'ring-2 ring-brand-mid' : 'opacity-70 hover:opacity-100'}`}
-                                >
-                                    {img ? (
-                                        <Image src={img} alt={`${suite.name} ${i + 1}`} fill className="object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <span className="text-2xl">🛏️</span>
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
+                        {galleries.length > 0 && (
+                            <div className="grid grid-cols-3 gap-3">
+                                {galleries.map((img: any, i: number) => (
+                                    <button
+                                        key={img.id ?? i}
+                                        onClick={() => setImageActive(i)}
+                                        className={`h-24 rounded-xl overflow-hidden bg-brand-light/20 relative transition-all duration-150 ${imageActive === i ? 'ring-2 ring-brand-mid' : 'opacity-70 hover:opacity-100'}`}
+                                    >
+                                        {img.image_path ? (
+                                            <Image src={img.image_path} alt={`${suite.name} ${i + 1}`} fill className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <span className="text-2xl">🛏️</span>
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         <div>
                             <h1 className="font-subheading text-2xl md:text-3xl font-semibold text-brand-forest mb-2">
@@ -118,6 +155,7 @@ export default function SuitePage() {
                                         type="date"
                                         value={dateDebut}
                                         onChange={e => setDateDebut(e.target.value)}
+                                        min={new Date().toISOString().split('T')[0]}
                                         className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
                                     />
                                 </div>
@@ -130,7 +168,14 @@ export default function SuitePage() {
                                         type="date"
                                         value={dateFin}
                                         onChange={e => setDateFin(e.target.value)}
-                                        min={dateDebut}
+                                        min={dateDebut
+                                                ? (() => {
+                                                    const d = new Date(dateDebut);
+                                                    d.setDate(d.getDate() + 1);
+                                                    return d.toISOString().split('T')[0];
+                                                })()
+                                                : undefined
+                                        }
                                         className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
                                     />
                                 </div>

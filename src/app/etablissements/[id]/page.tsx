@@ -1,60 +1,33 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { headers } from 'next/headers'
+import { notFound } from 'next/navigation'
 import SuiteCard from '@/components/cards/SuiteCard'
 
-const ETABLISSEMENT_MOCK = {
-    id: "1",
-    name: "Le Manoir des Brumes",
-    city: "Honfleur",
-    region: "Normandie",
-    address: "12 route des falaises, 14600 Honfleur",
-    description:
-        "Niché en lisière de forêt, cet hôtel offre un cadre paisible face à l'estuaire de la Seine. Chaque chambre est décorée avec soin, mêlant matières naturelles et confort contemporain. Un lieu hors du temps pour se ressourcer en toute sérénité.",
-    image_path: null,
-};
+type Props = {
+    params: Promise<{ id: string }>
+}
 
-const SUITES_MOCK = [
-    {
-        id: "s1",
-        name: "Suite Horizon",
-        description:
-            "Vue panoramique sur l'estuaire depuis un lit king-size. Baignoire îlot, terrasse privée et service petit-déjeuner inclus.",
-        capacity: 2,
-        price: 320,
-        image_path: null,
-    },
-    {
-        id: "s2",
-        name: "Chambre Forêt",
-        description:
-            "Immergée dans la verdure, cette chambre douillet allie bois brut et linge de maison haut de gamme. Idéale pour une escapade en amoureux.",
-        capacity: 2,
-        price: 195,
-        image_path: null,
-    },
-    {
-        id: "s3",
-        name: "Suite Familiale Brumes",
-        description:
-            "Deux espaces distincts reliés par un salon commun. Parfaite pour les familles ou groupes d'amis souhaitant partager un séjour sans sacrifier l'intimité.",
-        capacity: 4,
-        price: 450,
-        image_path: null,
-    },
-    {
-        id: "s4",
-        name: "Chambre Normande",
-        description:
-            "Inspirée des colombages traditionnels, cette chambre charme par ses poutres apparentes et sa cheminée en pierre. Confort moderne garanti.",
-        capacity: 2,
-        price: 160,
-        image_path: null,
-    },
-];
+async function getBaseUrl() {
+    const headersList = await headers()
+    const host = headersList.get('host')
+    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+    return `${protocol}://${host}/api`
+}
 
-export default function EtablissementPage() {
-    const e = ETABLISSEMENT_MOCK
-    const suites = SUITES_MOCK
+export default async function EtablissementPage({ params }: Props) {
+    const { id } = await params
+    const baseUrl = await getBaseUrl()
+
+    const [etablissementRes, chambresRes] = await Promise.all([
+        fetch(`${baseUrl}/establishments/${id}`, { cache: 'no-store' }),
+        fetch(`${baseUrl}/establishments/${id}/rooms`, { cache: 'no-store' }),
+    ])
+
+    if (!etablissementRes.ok) notFound()
+
+    const e = await etablissementRes.json()
+    const chambres = chambresRes.ok ? await chambresRes.json() : []
 
     return (
         <>
@@ -107,13 +80,13 @@ export default function EtablissementPage() {
                             Nos suites &amp; chambres
                         </h2>
                         <p className="font-body text-sm text-brand-slate">
-                            {suites.length} hébergement{suites.length > 1 ? 's' : ''} disponible{suites.length > 1 ? 's' : ''}
+                            {chambres.length} hébergement{chambres.length > 1 ? 's' : ''} disponible{chambres.length > 1 ? 's' : ''}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-4">
-                    {suites.map((suite) => (
+                    {chambres.map((suite: any) => (
                         <SuiteCard key={suite.id} suite={suite} />
                     ))}
                 </div>

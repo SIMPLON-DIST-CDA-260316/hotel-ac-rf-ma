@@ -55,7 +55,7 @@ export default function SuiteCard({ suite }: { suite: Suite }) {
                     </p>
 
                     <Link
-                        href={`/suites/${suite.id}`}
+                        href={`${suite.establishment_id}/suites/${suite.id}`}
                         className="font-body text-center bg-brand-dark hover:bg-brand-forest text-white text-xs px-4 py-2 rounded-lg transition-colors duration-200"
                     >
                         Voir la suite →
