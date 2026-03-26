@@ -21,6 +21,10 @@ export default function SuitePage() {
 
     const roomId = params.suiteId as string
 
+    const [reservationLoading, setReservationLoading] = useState(false)
+    const [reservationError, setReservationError] = useState<string | null>(null)
+    const [reservationSuccess, setReservationSuccess] = useState(false)
+
     const [suite, setSuite] = useState<any>(null)
     const [etablissement, setEtablissement] = useState<any>(null)
     const [galleries, setGalleries] = useState<any[]>([])
@@ -58,6 +62,38 @@ export default function SuitePage() {
 
         fetchData()
     }, [roomId])
+
+    async function handleReservation() {
+        if (!dateDebut || !dateFin || !suite) return
+
+        setReservationLoading(true)
+        setReservationError(null)
+        setReservationSuccess(false)
+
+        try {
+            const res = await fetch('/api/reservations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    room_id: suite.id,
+                    startAt: new Date(dateDebut).toISOString(),
+                    finishAt: new Date(dateFin).toISOString(),
+                }),
+            })
+
+            if (!res.ok) {
+                const data = await res.json()
+                setReservationError(data.error ?? 'Une erreur est survenue')
+                return
+            }
+
+            setReservationSuccess(true)
+        } catch {
+            setReservationError('Une erreur est survenue')
+        } finally {
+            setReservationLoading(false)
+        }
+    }
 
     const nuits = differenceEnNuits(dateDebut, dateFin)
     const prixTotal = nuits * (suite?.price ?? 0)
@@ -205,18 +241,32 @@ export default function SuitePage() {
                                         )}
                                     </div>
 
-                                            <button
-                                                disabled={nuits === 0 || !isLoggedIn}
-                                                className="font-body w-full bg-brand-mid hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-medium transition-colors duration-200"
-                                            >
-                                                {
-                                                    isLoggedIn ? (
-                                                        "Réserver maintenant"
-                                                    ) : (
-                                                        "Connectez-vous pour réserver"
-                                                    )
-                                                }
-                                            </button>
+                                    {reservationError && (
+                                        <p className="font-body text-xs text-red-500 text-center mb-3">
+                                            {reservationError}
+                                        </p>
+                                    )}
+
+                                    {reservationSuccess && (
+                                        <p className="font-body text-xs text-green-600 text-center mb-3">
+                                            Réservation confirmée ! 🎉
+                                        </p>
+                                    )}
+
+                                    <button
+                                        onClick={handleReservation}
+                                        disabled={nuits === 0 || !isLoggedIn || reservationLoading || reservationSuccess}
+                                        className="font-body w-full bg-brand-mid hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-medium transition-colors duration-200"
+                                    >
+                                        {!isLoggedIn
+                                            ? 'Connectez-vous pour réserver'
+                                            : reservationLoading
+                                                ? 'Réservation en cours...'
+                                                : reservationSuccess
+                                                    ? 'Réservation confirmée !'
+                                                    : 'Réserver maintenant'
+                                        }
+                                    </button>
 
                                 </div>
                             </div>
