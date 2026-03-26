@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 
 function differenceEnNuits(debut: string, fin: string): number {
     if (!debut || !fin) return 0
@@ -16,8 +17,13 @@ function differenceEnNuits(debut: string, fin: string): number {
 export default function SuitePage() {
     const params = useParams()
     const router = useRouter()
+    const { isLoggedIn, role } = useAuth()
 
     const roomId = params.suiteId as string
+
+    const [reservationLoading, setReservationLoading] = useState(false)
+    const [reservationError, setReservationError] = useState<string | null>(null)
+    const [reservationSuccess, setReservationSuccess] = useState(false)
 
     const [suite, setSuite] = useState<any>(null)
     const [etablissement, setEtablissement] = useState<any>(null)
@@ -29,6 +35,7 @@ export default function SuitePage() {
     const [imageActive, setImageActive] = useState(0)
 
     useEffect(() => {
+        console.info(isLoggedIn, role)
         async function fetchData() {
             try {
                 const [roomRes, galleriesRes] = await Promise.all([
@@ -55,6 +62,38 @@ export default function SuitePage() {
 
         fetchData()
     }, [roomId])
+
+    async function handleReservation() {
+        if (!dateDebut || !dateFin || !suite) return
+
+        setReservationLoading(true)
+        setReservationError(null)
+        setReservationSuccess(false)
+
+        try {
+            const res = await fetch('/api/reservations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    room_id: suite.id,
+                    startAt: new Date(dateDebut).toISOString(),
+                    finishAt: new Date(dateFin).toISOString(),
+                }),
+            })
+
+            if (!res.ok) {
+                const data = await res.json()
+                setReservationError(data.error ?? 'Une erreur est survenue')
+                return
+            }
+
+            setReservationSuccess(true)
+        } catch {
+            setReservationError('Une erreur est survenue')
+        } finally {
+            setReservationLoading(false)
+        }
+    }
 
     const nuits = differenceEnNuits(dateDebut, dateFin)
     const prixTotal = nuits * (suite?.price ?? 0)
@@ -141,76 +180,96 @@ export default function SuitePage() {
                         </div>
 
                     </div>
+                            <div className="lg:col-span-1">
+                                <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm sticky top-6">
+                                    <h2 className="font-subheading text-base font-semibold text-brand-forest mb-5">
+                                        Réserver cette suite
+                                    </h2>
 
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm sticky top-6">
-                            <h2 className="font-subheading text-base font-semibold text-brand-forest mb-5">
-                                Réserver cette suite
-                            </h2>
-
-                            <div className="flex flex-col gap-4 mb-5">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide">
-                                        Date de début
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={dateDebut}
-                                        onChange={e => setDateDebut(e.target.value)}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide">
-                                        Date de fin
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={dateFin}
-                                        onChange={e => setDateFin(e.target.value)}
-                                        min={dateDebut
-                                                ? (() => {
-                                                    const d = new Date(dateDebut);
-                                                    d.setDate(d.getDate() + 1);
-                                                    return d.toISOString().split('T')[0];
-                                                })()
-                                                : undefined
-                                        }
-                                        disabled={!dateDebut}
-                                        className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="border-t border-gray-100 pt-4 mb-5">
-                                {nuits > 0 ? (
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex justify-between font-body text-sm text-gray-500">
-                                            <span>{suite.price} € × {nuits} nuit{nuits > 1 ? 's' : ''}</span>
+                                    <div className="flex flex-col gap-4 mb-5">
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide">
+                                                Date de début
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={dateDebut}
+                                                onChange={e => setDateDebut(e.target.value)}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                disabled={!isLoggedIn}
+                                                className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
+                                            />
                                         </div>
-                                        <div className="flex justify-between font-body text-base font-semibold text-brand-forest mt-1">
-                                            <span>Prix total du séjour</span>
-                                            <span>{prixTotal} €</span>
+
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="font-body text-xs text-brand-slate font-medium uppercase tracking-wide">
+                                                Date de fin
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={dateFin}
+                                                onChange={e => setDateFin(e.target.value)}
+                                                min={dateDebut
+                                                    ? (() => {
+                                                        const d = new Date(dateDebut);
+                                                        d.setDate(d.getDate() + 1);
+                                                        return d.toISOString().split('T')[0];
+                                                    })()
+                                                    : undefined
+                                                }
+                                                disabled={!dateDebut}
+                                                className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
+                                            />
                                         </div>
                                     </div>
-                                ) : (
-                                    <p className="font-body text-sm text-brand-slate text-center">
-                                        Sélectionnez vos dates pour voir le prix total
-                                    </p>
-                                )}
+
+                                    <div className="border-t border-gray-100 pt-4 mb-5">
+                                        {nuits > 0 ? (
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex justify-between font-body text-sm text-gray-500">
+                                                    <span>{suite.price} € × {nuits} nuit{nuits > 1 ? 's' : ''}</span>
+                                                </div>
+                                                <div className="flex justify-between font-body text-base font-semibold text-brand-forest mt-1">
+                                                    <span>Prix total du séjour</span>
+                                                    <span>{prixTotal} €</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="font-body text-sm text-brand-slate text-center">
+                                                Sélectionnez vos dates pour voir le prix total
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {reservationError && (
+                                        <p className="font-body text-xs text-red-500 text-center mb-3">
+                                            {reservationError}
+                                        </p>
+                                    )}
+
+                                    {reservationSuccess && (
+                                        <p className="font-body text-xs text-green-600 text-center mb-3">
+                                            Réservation confirmée ! 🎉
+                                        </p>
+                                    )}
+
+                                    <button
+                                        onClick={handleReservation}
+                                        disabled={nuits === 0 || !isLoggedIn || reservationLoading || reservationSuccess}
+                                        className="font-body w-full bg-brand-mid hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-medium transition-colors duration-200"
+                                    >
+                                        {!isLoggedIn
+                                            ? 'Connectez-vous pour réserver'
+                                            : reservationLoading
+                                                ? 'Réservation en cours...'
+                                                : reservationSuccess
+                                                    ? 'Réservation confirmée !'
+                                                    : 'Réserver maintenant'
+                                        }
+                                    </button>
+
+                                </div>
                             </div>
-
-                            <button
-                                disabled={nuits === 0}
-                                className="font-body w-full bg-brand-mid hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-medium transition-colors duration-200"
-                            >
-                                Réserver maintenant
-                            </button>
-                        </div>
-                    </div>
-
                 </div>
             </section>
         </>

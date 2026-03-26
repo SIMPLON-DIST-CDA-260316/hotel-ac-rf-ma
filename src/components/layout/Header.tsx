@@ -1,11 +1,15 @@
+"use client"
+
 import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
 
 type HeaderProps = {
     isLoggedIn: boolean
     role: string | null
 }
 
-export default function Header({ isLoggedIn, role }: HeaderProps) {
+export default function Header() {
+    const { isLoggedIn, role } = useAuth()
     const isManagerOrAdmin = role === 'admin' || role === 'manager'
 
     return (
