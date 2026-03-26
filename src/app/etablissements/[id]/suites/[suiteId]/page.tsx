@@ -176,6 +176,7 @@ export default function SuitePage() {
                                                 })()
                                                 : undefined
                                         }
+                                        disabled={!dateDebut}
                                         className="font-body border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-mid bg-gray-50"
                                     />
                                 </div>
@@ -186,7 +187,6 @@ export default function SuitePage() {
                                     <div className="flex flex-col gap-1">
                                         <div className="flex justify-between font-body text-sm text-gray-500">
                                             <span>{suite.price} € × {nuits} nuit{nuits > 1 ? 's' : ''}</span>
-                                            <span>{prixTotal} €</span>
                                         </div>
                                         <div className="flex justify-between font-body text-base font-semibold text-brand-forest mt-1">
                                             <span>Prix total du séjour</span>

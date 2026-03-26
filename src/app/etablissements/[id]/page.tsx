@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import SuiteCard from '@/components/cards/SuiteCard'
+import EstablishmentsBack from '@/components/buttons/EstablishmentsBack'
 
 type Props = {
     params: Promise<{ id: string }>
@@ -33,16 +34,7 @@ export default async function EtablissementPage({ params }: Props) {
         <>
             <section className="bg-brand-forest text-white py-12 px-6">
                 <div className="max-w-5xl mx-auto">
-                    <Link
-                        href="/etablissements"
-                        className="inline-flex items-center gap-2 font-body text-sm text-white/70 hover:text-white transition-colors duration-150 mb-8"
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="19" y1="12" x2="5" y2="12" />
-                            <polyline points="12 19 5 12 12 5" />
-                        </svg>
-                        Retour aux établissements
-                    </Link>
+                    <EstablishmentsBack />
 
                     <div className="w-full h-72 md:h-96 rounded-2xl overflow-hidden mb-8 bg-brand-light/20 relative">
                         {e.image_path ? (
