@@ -40,7 +40,7 @@ export default function ContactPage() {
                         Nous contacter
                     </h1>
                     <p className="font-body text-sm text-white/70 max-w-xl mx-auto leading-relaxed">
-                        Une question sur une réservation, un établissement ou simplement envie d'en savoir plus ?
+                        Une question sur une réservation, un établissement ou simplement envie d&apos;en savoir plus ?
                         Notre équipe vous répond dans les meilleurs délais.
                     </p>
                 </div>
